@@ -187,25 +187,23 @@ String ConvBinUnits(int bytes, int resolution) {
 
 //#############################################################################################
 void Dir(AsyncWebServerRequest * request) {
-  String Fname1, Fname2;
+  String Fname;
   int index = 0;
   Directory(SD_MMC, "/"); // Get a list of the current files on the FS
   webpage  = HTML_Header();
   webpage += "<h3>Filing System Content</h3><br>";
   if (numfiles > 0) {
     webpage += "<table class='center'>";
-    webpage += "<tr><th>Type</th><th>File Name</th><th>File Size</th><th class='sp'></th><th>Type</th><th>File Name</th><th>File Size</th></tr>";
+    webpage += "<tr><th>Type</th><th>File Name</th><th>File Size</th><th class='sp'></th></tr>";
     while (index < numfiles) {
-      Fname1 = Filenames[index].filename;
-      Fname2 = Filenames[index + 1].filename;
+      Fname = Filenames[index].filename;
       webpage += "<tr>";
-      webpage += "<td style = 'width:5%'>" + Filenames[index].ftype + "</td><td style = 'width:25%'>" + Fname1 + "</td><td style = 'width:10%'>" + Filenames[index].fsize + "</td>";
+      webpage += "<td style = 'width:5%'>" + Filenames[index].ftype + "</td><td style = 'width:25%'>" + Fname + "</td><td style = 'width:10%'>" + Filenames[index].fsize + "</td>";
       webpage += "<td class='sp'></td>";
-      if (index < numfiles - 1) {
-        webpage += "<td style = 'width:5%'>" + Filenames[index + 1].ftype + "</td><td style = 'width:25%'>" + Fname2 + "</td><td style = 'width:10%'>" + Filenames[index + 1].fsize + "</td>";
-      }
+      webpage += "<td><FORM action='/' method='post'><button type='submit' name='download' value='download_" + Fname + "'>Download</button></td>";
+      webpage += "<td><FORM action='/' method='post'><button type='submit' name='download' value='delete_" + Fname + "'>Delete</button></td>";
       webpage += "</tr>";
-      index = index + 2;
+      index++;
     }
     webpage += "</table>";
     webpage += "<p style='background-color:yellow;'><b>" + MessageLine + "</b></p>";
@@ -236,3 +234,43 @@ void Directory(fs::FS &fs, const char * dirname) {
     root.close();
   }
 }
+/*
+<!DOCTYPE html>
+<html>
+<head>
+<title>Page Title</title>
+</head>
+<body>
+<table class='center'>
+	<tr>
+    	<th>Type</th>
+        <th>File Name</th>
+        <th>File Size</th>
+        <th class='sp'></th>
+        <th>Type</th>
+        <th>File Name</th>
+        <th>File Size</th>
+	</tr>
+</table>
+
+<table class='center'>
+	<tr>
+    	<th>Name/Type</th>
+      <th style='width:20%'>Type File/Dir</th>
+      <th>File Size</th>
+	</tr>
+
+	<tr>
+    	<td>"File"</td>
+        <td>"Name"</td>
+        <td>"1234"</td>
+        <td>
+        	<FORM action='/' method='post'>
+            	<button type='submit' name='download' value='download_xxx'>Download</button>
+            </FORM>
+        </td>
+    </tr>
+</table>
+</body>
+</html>
+*/
