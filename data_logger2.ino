@@ -77,17 +77,28 @@ void setup() {
 
   /*********  Server Commands  **********/
   // ##################### HOMEPAGE HANDLER ###########################
-  server.on("/", HTTP_GET, [](AsyncWebServerRequest * request) {
-    Serial.println("Home Page...");
-    Home(); // Build webpage ready for display
-    request->send(200, "text/html", webpage);
-  });
 
-  // ##################### DIR HANDLER ###############################
-  server.on("/dir", HTTP_GET, [](AsyncWebServerRequest * request) {
-    Serial.println("File Directory...");
-    Dir(request); // Build webpage ready for display
-    request->send(200, "text/html", webpage);
+  // Route to manage both GET and POST requests
+  server.on("/", HTTP_ANY, [](AsyncWebServerRequest *request){
+    if (request->method() == HTTP_GET) {
+      // Invia la pagina HTML
+      Serial.println("Home Page...HTTP_GET");
+      Dir(request); // Build webpage ready for display
+      request->send(200, "text/html", webpage);
+    } else if (request->method() == HTTP_POST) {
+      Serial.println("Home Page...HTTP_POST");
+
+      // Itera attraverso tutti i parametri POST
+      int params = request->params();
+      for(int i = 0; i < params; i++) {
+        AsyncWebParameter* p = request->getParam(i);
+        Serial.printf("POST Parameter: %s = %s\n", p->name().c_str(), p->value().c_str());
+      }
+
+      // Invia la pagina HTML
+      Dir(request); // Costruisce la pagina web pronta per essere visualizzata
+      request->send(200, "text/html", webpage);
+    }
   });
 
   server.begin();  // Start the server
@@ -201,7 +212,7 @@ void Dir(AsyncWebServerRequest * request) {
       webpage += "<td style = 'width:5%'>" + Filenames[index].ftype + "</td><td style = 'width:25%'>" + Fname + "</td><td style = 'width:10%'>" + Filenames[index].fsize + "</td>";
       webpage += "<td class='sp'></td>";
       webpage += "<td><FORM action='/' method='post'><button type='submit' name='download' value='download_" + Fname + "'>Download</button></td>";
-      webpage += "<td><FORM action='/' method='post'><button type='submit' name='download' value='delete_" + Fname + "'>Delete</button></td>";
+      webpage += "<td><FORM action='/' method='post'><button type='submit' name='delete' value='delete_" + Fname + "'>Delete</button></td>";
       webpage += "</tr>";
       index++;
     }
