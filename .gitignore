@@ -1,0 +1,7 @@
+# Ignore everything
+*
+
+# Unignore specific files and directories
+!.gitignore
+data_logger2.ino
+

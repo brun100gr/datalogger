@@ -9,9 +9,6 @@
 // Definire il pin CS (Chip Select) per la scheda SD
 #define SD_CS_PIN 5
 
-// Definire il nome del file
-const char* filename = "/example.txt";
-
 // Create AsyncWebServer object on port 80
 AsyncWebServer server(80);
 
@@ -95,9 +92,24 @@ void setup() {
         Serial.printf("POST Parameter: %s = %s\n", p->name().c_str(), p->value().c_str());
       }
 
-      // Invia la pagina HTML
-      Dir(request); // Costruisce la pagina web pronta per essere visualizzata
-      request->send(200, "text/html", webpage);
+      // Get the argument with the full file name
+      String fullFileName = request->arg("download");
+
+      if(!fullFileName.isEmpty()) {
+        // Define the prefix that you want to remove
+        String prefix = "download_";
+        
+        // Remove the prefix by using the substring method
+        String fileName = fullFileName.substring(prefix.length());
+        Serial.printf("Filename: %s\n", fileName);
+
+        AsyncWebServerResponse *response = request->beginResponse(SD_MMC, "/"+fileName, String(), true);
+        request->send(response);
+      } else {
+        // Invia la pagina HTML
+        Dir(request); // Costruisce la pagina web pronta per essere visualizzata
+        request->send(200, "text/html", webpage);
+      }
     }
   });
 
@@ -122,6 +134,23 @@ void setup() {
   
   Serial.println("Stringa scritta nel file con successo");
 */
+}
+
+//#############################################################################################
+// Function to display file content on Serial Monitor
+void displayFileContent(const String& fileName) {
+  File file = SD_MMC.open(fileName);
+  if (!file) {
+    Serial.println("Failed to open file for reading");
+    return;
+  }
+
+  Serial.println("File Content:");
+  while (file.available()) {
+    String line = file.readStringUntil('\n');
+    Serial.println(line);
+  }
+  file.close();
 }
 
 void loop() {
@@ -245,6 +274,27 @@ void Directory(fs::FS &fs, const char * dirname) {
     root.close();
   }
 }
+
+/*
+AsyncWebServerResponse *response = request->beginResponse(SD_MMC, request->arg("filename"), String(), true);
+
+//Download a file from the SD
+void SD_file_download(String filename)
+{
+//  if (SD_present) 
+//  { 
+    File download = SD.open("/"+filename);
+//    if (download) 
+//    {
+      server.sendHeader("Content-Type", "text/text");
+      server.sendHeader("Content-Disposition", "attachment; filename="+filename);
+      server.sendHeader("Connection", "close");
+      server.streamFile(download, "application/octet-stream");
+      download.close();
+//    } else ReportFileNotPresent("download"); 
+//  } else ReportSDNotPresent();
+}
+*/
 /*
 <!DOCTYPE html>
 <html>
