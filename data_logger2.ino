@@ -92,16 +92,29 @@ void setup() {
         Serial.printf("POST Parameter: %s = %s\n", p->name().c_str(), p->value().c_str());
       }
 
-      // Get the argument with the full file name
-      String fullFileName = request->arg("download");
+      if (request->hasArg("view")) {
+        // Get the argument with the full file name
+        String fullFileName = request->arg("view");
 
-      if(!fullFileName.isEmpty()) {
-        // Define the prefix that you want to remove
+        // Define the prefix to remove
+        String prefix = "view_";
+        
+        // Remove the prefix by using the substring method
+        String fileName = fullFileName.substring(prefix.length());
+        Serial.printf("View filename: %s\n", fileName);
+
+        AsyncWebServerResponse *response = request->beginResponse(SD_MMC, "/"+fileName, String(), false);
+        request->send(response);
+      } else if (request->hasArg("download")) {
+        // Get the argument with the full file name
+        String fullFileName = request->arg("download");
+
+        // Define the prefix to remove
         String prefix = "download_";
         
         // Remove the prefix by using the substring method
         String fileName = fullFileName.substring(prefix.length());
-        Serial.printf("Filename: %s\n", fileName);
+        Serial.printf("Download filename: %s\n", fileName);
 
         AsyncWebServerResponse *response = request->beginResponse(SD_MMC, "/"+fileName, String(), true);
         request->send(response);
@@ -241,7 +254,9 @@ void Dir(AsyncWebServerRequest * request) {
       webpage += "<td style = 'width:5%'>" + Filenames[index].ftype + "</td><td style = 'width:25%'>" + Fname + "</td><td style = 'width:10%'>" + Filenames[index].fsize + "</td>";
       webpage += "<td class='sp'></td>";
       webpage += "<td><FORM action='/' method='post'><button type='submit' name='download' value='download_" + Fname + "'>Download</button></td>";
+      webpage += "<td><FORM action='/' method='post'><button type='submit' name='view' value='view_" + Fname + "'>View</button></td>";
       webpage += "<td><FORM action='/' method='post'><button type='submit' name='delete' value='delete_" + Fname + "'>Delete</button></td>";
+      
       webpage += "</tr>";
       index++;
     }
