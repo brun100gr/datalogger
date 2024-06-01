@@ -126,6 +126,17 @@ void setup() {
     }
   });
 
+  // Add file upload handling
+  server.on("/upload", HTTP_POST, 
+    [](AsyncWebServerRequest *request) {
+      Serial.println("Handling upload...");
+      request->send(200, "text/plain", "File Uploaded");
+    }, 
+    [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
+      onFileUpload(request, filename, index, data, len, final);
+    }
+  );
+
   server.begin();  // Start the server
 
 /*
@@ -147,6 +158,24 @@ void setup() {
   
   Serial.println("Stringa scritta nel file con successo");
 */
+}
+
+//#############################################################################################
+// File upload handler
+void  onFileUpload(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
+  if (!index) {  // Start of a new file upload
+    Serial.printf("UploadStart: %s\n", filename.c_str());
+    request->_tempFile = SD_MMC.open("/" + filename, FILE_WRITE);
+  }
+  if (request->_tempFile) {
+    request->_tempFile.write(data, len);
+  }
+  if (final) {  // End of file upload
+    if (request->_tempFile) {
+      request->_tempFile.close();
+    }
+    Serial.printf("UploadEnd: %s (%u)\n", filename.c_str(), index + len);
+  }
 }
 
 //#############################################################################################
@@ -253,9 +282,9 @@ void Dir(AsyncWebServerRequest * request) {
       webpage += "<tr>";
       webpage += "<td style = 'width:5%'>" + Filenames[index].ftype + "</td><td style = 'width:25%'>" + Fname + "</td><td style = 'width:10%'>" + Filenames[index].fsize + "</td>";
       webpage += "<td class='sp'></td>";
-      webpage += "<td><FORM action='/' method='post'><button type='submit' name='download' value='download_" + Fname + "'>Download</button></td>";
-      webpage += "<td><FORM action='/' method='post'><button type='submit' name='view' value='view_" + Fname + "'>View</button></td>";
-      webpage += "<td><FORM action='/' method='post'><button type='submit' name='delete' value='delete_" + Fname + "'>Delete</button></td>";
+      webpage += "<td><FORM action='/' method='post'><button type='submit' name='download' value='download_" + Fname + "'>Download</button></td></FORM>";
+      webpage += "<td><FORM action='/' method='post'><button type='submit' name='view' value='view_" + Fname + "'>View</button></td></FORM>";
+      webpage += "<td><FORM action='/' method='post'><button type='submit' name='delete' value='delete_" + Fname + "'>Delete</button></td></FORM>";
       
       webpage += "</tr>";
       index++;
@@ -268,8 +297,18 @@ void Dir(AsyncWebServerRequest * request) {
   {
     webpage += "<h2>No Files Found</h2>";
   }
+  
+  // Add file upload form
+  webpage += "<hr>";
+  webpage += "<h3>Upload File</h3>";
+  webpage += "<FORM action='/upload/' method='post' enctype='multipart/form-data'>";
+  webpage += "<input type='file' name='upload'>";
+  webpage += "<input type='submit' value='Upload'>";
+  webpage += "</FORM>";
+
   webpage += HTML_Footer();
-  request->send(200, "text/html", webpage);
+  Serial.println(webpage);
+  //request->send(200, "text/html", webpage);
 }
 
 //#############################################################################################
@@ -290,63 +329,3 @@ void Directory(fs::FS &fs, const char * dirname) {
   }
 }
 
-/*
-AsyncWebServerResponse *response = request->beginResponse(SD_MMC, request->arg("filename"), String(), true);
-
-//Download a file from the SD
-void SD_file_download(String filename)
-{
-//  if (SD_present) 
-//  { 
-    File download = SD.open("/"+filename);
-//    if (download) 
-//    {
-      server.sendHeader("Content-Type", "text/text");
-      server.sendHeader("Content-Disposition", "attachment; filename="+filename);
-      server.sendHeader("Connection", "close");
-      server.streamFile(download, "application/octet-stream");
-      download.close();
-//    } else ReportFileNotPresent("download"); 
-//  } else ReportSDNotPresent();
-}
-*/
-/*
-<!DOCTYPE html>
-<html>
-<head>
-<title>Page Title</title>
-</head>
-<body>
-<table class='center'>
-	<tr>
-    	<th>Type</th>
-        <th>File Name</th>
-        <th>File Size</th>
-        <th class='sp'></th>
-        <th>Type</th>
-        <th>File Name</th>
-        <th>File Size</th>
-	</tr>
-</table>
-
-<table class='center'>
-	<tr>
-    	<th>Name/Type</th>
-      <th style='width:20%'>Type File/Dir</th>
-      <th>File Size</th>
-	</tr>
-
-	<tr>
-    	<td>"File"</td>
-        <td>"Name"</td>
-        <td>"1234"</td>
-        <td>
-        	<FORM action='/' method='post'>
-            	<button type='submit' name='download' value='download_xxx'>Download</button>
-            </FORM>
-        </td>
-    </tr>
-</table>
-</body>
-</html>
-*/
