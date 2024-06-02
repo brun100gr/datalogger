@@ -1,8 +1,8 @@
-#include "FS.h"
-#include "SD_MMC.h"
-#include "ESPAsyncWebServer.h"
-
-#include "credentials.h"
+#include <FS.h>
+#include <SD_MMC.h>
+#include <ESPAsyncWebServer.h>
+#include <map>
+#include <vector>
 
 //#include "CSS.h"  // Includes headers of the web and de style file
 
@@ -22,24 +22,24 @@ typedef struct
   String fsize;
 } fileinfo;
 
+std::map<String, std::vector<String>> configMap;
+
 String webpage, MessageLine;
 fileinfo Filenames[200]; // Enough for most purposes!
 int numfiles;
 
+std::vector<String> getKeyValue(const String &key) {
+  if (configMap.find(key) != configMap.end()) {
+    return configMap[key];
+  } else {
+    Serial.println("Key \"" + key + "\" not found in configuration.");
+    return std::vector<String>(); // Return an empty vector if the key is not found
+  }
+}
+
 void setup() {
   Serial.begin(115200);
   
-  WiFi.begin(mySSID, myPW);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
-  // Print local IP address and start web server
-  Serial.println("");
-  Serial.println("WiFi connected.");
-  Serial.println("IP address: ");
-  Serial.println(WiFi.localIP());
-
   // Inizializzare la scheda SD
   Serial.println("Mounting MicroSD Card");
   if (!SD_MMC.begin("/sdcard", false, false, 40000000, 5)) {
@@ -71,6 +71,21 @@ void setup() {
   Serial.printf("SD_MMC Card Size: %lluMB\n", cardSize);
 
   Serial.println("Scheda SD inizializzata correttamente");
+
+  readFile(SD_MMC, "/config.txt");
+  printConfig();
+
+  WiFi.begin(getKeyValue("mySSID").front(), getKeyValue("myPW").front());
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  // Print local IP address and start web server
+  Serial.println("");
+  Serial.println("WiFi connected.");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+
 
   /*********  Server Commands  **********/
   // ##################### HOMEPAGE HANDLER ###########################
@@ -208,49 +223,49 @@ void Home() {
 
 //#############################################################################################
 String HTML_Header() {
-  String page;
-  page  = F("<!DOCTYPE html><html>");
-  page += F("<head>");
-  page += F("<title>MC Server</title>"); // NOTE: 1em = 16px
-  page += F("<meta name='viewport' content='user-scalable=yes,initial-scale=1.0,width=device-width'>");
-  page += F("<style>");//From here style:
-  page += F("body{max-width:65%;margin:0 auto;font-family:arial;font-size:100%;}");
-  page += F("ul{list-style-type:none;padding:0;border-radius:0em;overflow:hidden;background-color:#d90707;font-size:1em;}");
-  page += F("li{float:left;border-radius:0em;border-right:0em solid #bbb;}");
-  page += F("li a{color:white; display: block;border-radius:0.375em;padding:0.44em 0.44em;text-decoration:none;font-size:100%}");
-  page += F("li a:hover{background-color:#e86b6b;border-radius:0em;font-size:100%}");
-  page += F("h1{color:white;border-radius:0em;font-size:1.5em;padding:0.2em 0.2em;background:#d90707;}");
-  page += F("h2{color:blue;font-size:0.8em;}");
-  page += F("h3{font-size:0.8em;}");
-  page += F("table{font-family:arial,sans-serif;font-size:0.9em;border-collapse:collapse;width:85%;}"); 
-  page += F("th,td {border:0.06em solid #dddddd;text-align:left;padding:0.3em;border-bottom:0.06em solid #dddddd;}"); 
-  page += F("tr:nth-child(odd) {background-color:#eeeeee;}");
-  page += F(".rcorners_n {border-radius:0.5em;background:#558ED5;padding:0.3em 0.3em;width:20%;color:white;font-size:75%;}");
-  page += F(".rcorners_m {border-radius:0.5em;background:#558ED5;padding:0.3em 0.3em;width:50%;color:white;font-size:75%;}");
-  page += F(".rcorners_w {border-radius:0.5em;background:#558ED5;padding:0.3em 0.3em;width:70%;color:white;font-size:75%;}");
-  page += F(".column{float:left;width:50%;height:45%;}");
-  page += F(".row:after{content:'';display:table;clear:both;}");
-  page += F("*{box-sizing:border-box;}");
-  page += F("a{font-size:75%;}");
-  page += F("p{font-size:75%;}");
-  page += F("</style></head><body><h1>My Circuits</h1>");
-  page += F("<ul>");
-  page += F("<li><a href='/'>Files</a></li>"); //Menu bar with commands
-  page += F("<li><a href='/upload'>Configuration</a></li>"); 
-  page += F("</ul>");
-  return page;
+  String pageHeader;
+  pageHeader  = F("<!DOCTYPE html><html>");
+  pageHeader += F("<head>");
+  pageHeader += F("<title>MC Server</title>"); // NOTE: 1em = 16px
+  pageHeader += F("<meta name='viewport' content='user-scalable=yes,initial-scale=1.0,width=device-width'>");
+  pageHeader += F("<style>");//From here style:
+  pageHeader += F("body{max-width:65%;margin:0 auto;font-family:arial;font-size:100%;}");
+  pageHeader += F("ul{list-style-type:none;padding:0;border-radius:0em;overflow:hidden;background-color:#d90707;font-size:1em;}");
+  pageHeader += F("li{float:left;border-radius:0em;border-right:0em solid #bbb;}");
+  pageHeader += F("li a{color:white; display: block;border-radius:0.375em;padding:0.44em 0.44em;text-decoration:none;font-size:100%}");
+  pageHeader += F("li a:hover{background-color:#e86b6b;border-radius:0em;font-size:100%}");
+  pageHeader += F("h1{color:white;border-radius:0em;font-size:1.5em;padding:0.2em 0.2em;background:#d90707;}");
+  pageHeader += F("h2{color:blue;font-size:0.8em;}");
+  pageHeader += F("h3{font-size:0.8em;}");
+  pageHeader += F("table{font-family:arial,sans-serif;font-size:0.9em;border-collapse:collapse;width:85%;}"); 
+  pageHeader += F("th,td {border:0.06em solid #dddddd;text-align:left;padding:0.3em;border-bottom:0.06em solid #dddddd;}"); 
+  pageHeader += F("tr:nth-child(odd) {background-color:#eeeeee;}");
+  pageHeader += F(".rcorners_n {border-radius:0.5em;background:#558ED5;padding:0.3em 0.3em;width:20%;color:white;font-size:75%;}");
+  pageHeader += F(".rcorners_m {border-radius:0.5em;background:#558ED5;padding:0.3em 0.3em;width:50%;color:white;font-size:75%;}");
+  pageHeader += F(".rcorners_w {border-radius:0.5em;background:#558ED5;padding:0.3em 0.3em;width:70%;color:white;font-size:75%;}");
+  pageHeader += F(".column{float:left;width:50%;height:45%;}");
+  pageHeader += F(".row:after{content:'';display:table;clear:both;}");
+  pageHeader += F("*{box-sizing:border-box;}");
+  pageHeader += F("a{font-size:75%;}");
+  pageHeader += F("p{font-size:75%;}");
+  pageHeader += F("</style></head><body><h1>My Circuits</h1>");
+  pageHeader += F("<ul>");
+  pageHeader += F("<li><a href='/'>Files</a></li>"); //Menu bar with commands
+  pageHeader += F("<li><a href='/upload'>Configuration</a></li>"); 
+  pageHeader += F("</ul>");
+  return pageHeader;
 }
 
 //#############################################################################################
 String HTML_Footer() {
-  String page;
-  page += "<br><br><footer>";
-  page += "<p class='medium'>ESP Asynchronous WebServer Example</p>";
-  page += "<p class='ps'><i>Copyright &copy;&nbsp;D L Bird 2021 Version " +  Version + "</i></p>";
-  page += "</footer>";
-  page += "</body>";
-  page += "</html>";
-  return page;
+  String pageFooter;
+  pageFooter  = F("<br><br><footer>");
+  pageFooter += F("<p class='medium'>ESP Asynchronous WebServer Example</p>");
+  pageFooter += "<p class='ps'><i>Copyright &copy;&nbsp;Bruno 2024 Version " +  Version + "</i></p>";
+  pageFooter += F("</footer>");
+  pageFooter += F("</body>");
+  pageFooter += F("</html>");
+  return pageFooter;
 }
 
 //#############################################################################################
@@ -282,9 +297,9 @@ void Dir(AsyncWebServerRequest * request) {
       webpage += "<tr>";
       webpage += "<td style = 'width:5%'>" + Filenames[index].ftype + "</td><td style = 'width:25%'>" + Fname + "</td><td style = 'width:10%'>" + Filenames[index].fsize + "</td>";
       webpage += "<td class='sp'></td>";
-      webpage += "<td><FORM action='/' method='post'><button type='submit' name='download' value='download_" + Fname + "'>Download</button></td></FORM>";
-      webpage += "<td><FORM action='/' method='post'><button type='submit' name='view' value='view_" + Fname + "'>View</button></td></FORM>";
-      webpage += "<td><FORM action='/' method='post'><button type='submit' name='delete' value='delete_" + Fname + "'>Delete</button></td></FORM>";
+      webpage += "<td><form action='/' method='post'><button type='submit' name='download' value='download_" + Fname + "'>Download</button></td></form>";
+      webpage += "<td><form action='/' method='post'><button type='submit' name='view' value='view_" + Fname + "'>View</button></td></form>";
+      webpage += "<td><form action='/' method='post'><button type='submit' name='delete' value='delete_" + Fname + "'>Delete</button></td></form>";
       
       webpage += "</tr>";
       index++;
@@ -301,14 +316,13 @@ void Dir(AsyncWebServerRequest * request) {
   // Add file upload form
   webpage += "<hr>";
   webpage += "<h3>Upload File</h3>";
-  webpage += "<FORM action='/upload/' method='post' enctype='multipart/form-data'>";
+  webpage += "<form action='/upload/' method='post' enctype='multipart/form-data'>";
   webpage += "<input type='file' name='upload'>";
   webpage += "<input type='submit' value='Upload'>";
-  webpage += "</FORM>";
+  webpage += "</form>";
 
   webpage += HTML_Footer();
   Serial.println(webpage);
-  //request->send(200, "text/html", webpage);
 }
 
 //#############################################################################################
@@ -328,4 +342,61 @@ void Directory(fs::FS &fs, const char * dirname) {
     root.close();
   }
 }
+
+//#############################################################################################
+void readFile(fs::FS &fs, const char *path) {
+  Serial.printf("Reading file: %s\n", path);
+
+  File file = fs.open(path);
+  if (!file) {
+    Serial.println("Failed to open file for reading");
+    return;
+  }
+
+  Serial.println("Read from file:");
+  String line;
+  while (file.available()) {
+    line = file.readStringUntil('\n');
+    parseConfigLine(line);
+  }
+  file.close();
+}
+
+//#############################################################################################
+void parseConfigLine(const String &line) {
+  // Ignore lines that start with '#'
+  if (line.startsWith("#")) {
+    return;
+  }
+
+  int commaIndex = line.indexOf(',');
+  if (commaIndex == -1) {
+    Serial.println("Invalid config line: " + line);
+    return;
+  }
+
+  String key = line.substring(0, commaIndex);
+  std::vector<String> values;
+
+  int startIndex = commaIndex + 1;
+  int endIndex;
+  while ((endIndex = line.indexOf(',', startIndex)) != -1) {
+    values.push_back(line.substring(startIndex, endIndex));
+    startIndex = endIndex + 1;
+  }
+  values.push_back(line.substring(startIndex)); // Add the last value
+
+  configMap[key] = values;
+}
+
+void printConfig() {
+  for (const auto &entry : configMap) {
+    Serial.print("Key: " + entry.first + " Values: ");
+    for (const auto &value : entry.second) {
+      Serial.print(value + " ");
+    }
+    Serial.println();
+  }
+}
+
 
