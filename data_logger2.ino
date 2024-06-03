@@ -152,6 +152,11 @@ void setup() {
     }
   );
 
+  // Config page handling
+  server.on("/config", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(200, "text/html", "<html><body><h1>Hello, ESP32! Configuration page</h1></body></html>");
+  });
+
   server.begin();  // Start the server
 
 /*
@@ -251,7 +256,7 @@ String HTML_Header() {
   pageHeader += F("</style></head><body><h1>My Circuits</h1>");
   pageHeader += F("<ul>");
   pageHeader += F("<li><a href='/'>Files</a></li>"); //Menu bar with commands
-  pageHeader += F("<li><a href='/upload'>Configuration</a></li>"); 
+  pageHeader += F("<li><a href='/config'>Configuration</a></li>"); 
   pageHeader += F("</ul>");
   return pageHeader;
 }
