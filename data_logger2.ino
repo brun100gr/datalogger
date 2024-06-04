@@ -3,6 +3,9 @@
 #include <ESPAsyncWebServer.h>
 #include <map>
 #include <vector>
+#include <NTPClient.h>
+#include <Timezone.h>
+//#include <WiFiUdp.h>
 
 //#include "CSS.h"  // Includes headers of the web and de style file
 
@@ -27,6 +30,15 @@ std::map<String, std::vector<String>> configMap;
 String webpage, MessageLine;
 fileinfo Filenames[200]; // Enough for most purposes!
 int numfiles;
+
+// Initialize WiFi and NTP Client
+WiFiUDP ntpUDP;
+NTPClient timeClient(ntpUDP, "pool.ntp.org", 0, 60000); // Sync every minute
+
+// Define your local time zone and DST rules
+TimeChangeRule dstStart = {"DST", Last, Sun, Mar, 2, 120};  // Last Sunday of March at 2:00 AM UTC+2
+TimeChangeRule stdStart = {"STD", First, Sun, Nov, 3, 60};  // First Sunday of November at 3:00 AM UTC+1
+Timezone timezone(dstStart, stdStart);
 
 std::vector<String> getKeyValue(const String &key) {
   if (configMap.find(key) != configMap.end()) {
@@ -86,6 +98,11 @@ void setup() {
   Serial.println("IP address: ");
   Serial.println(WiFi.localIP());
 
+  // Initialize NTP client
+  timeClient.begin();
+
+  // Update the NTP client to get the latest time
+  timeClient.update();
 
   /*********  Server Commands  **********/
   // ##################### HOMEPAGE HANDLER ###########################
@@ -216,7 +233,33 @@ void displayFileContent(const String& fileName) {
 }
 
 void loop() {
-  // Non c'è bisogno di eseguire operazioni continuamente
+    // Update the NTP client to get the latest time
+    timeClient.update();
+    
+    // Get current epoch time
+    time_t utc = timeClient.getEpochTime();
+  
+    // Print the epoch time in seconds
+    Serial.print("Epoch Time (seconds): ");
+    Serial.println(utc);
+    
+    // Convert to local time with DST adjustment
+    time_t local = timezone.toLocal(utc);
+    
+    // Format the timestamp
+    String timestamp = getFormattedTime(local);
+    
+    Serial.println(timestamp);
+
+    delay(1000);
+}
+
+//#############################################################################################
+// Convert epoch time to formatted time string
+String getFormattedTime(time_t epochTime) {
+  char buffer[20];
+  snprintf(buffer, sizeof(buffer), "%04d-%02d-%02d %02d:%02d:%02d", year(epochTime), month(epochTime), day(epochTime), hour(epochTime), minute(epochTime), second(epochTime));
+  return String(buffer);
 }
 
 //#############################################################################################
