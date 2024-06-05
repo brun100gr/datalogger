@@ -233,6 +233,9 @@ void displayFileContent(const String& fileName) {
 }
 
 void loop() {
+    // Check if data is available on the serial port
+  if (Serial.available()) {
+    String data = Serial.readStringUntil('\n');
     // Update the NTP client to get the latest time
     timeClient.update();
     
@@ -240,18 +243,39 @@ void loop() {
     time_t utc = timeClient.getEpochTime();
   
     // Print the epoch time in seconds
-    Serial.print("Epoch Time (seconds): ");
-    Serial.println(utc);
+    //Serial.print("Epoch Time (seconds): ");
+    //Serial.println(utc);
     
     // Convert to local time with DST adjustment
     time_t local = timezone.toLocal(utc);
     
     // Format the timestamp
     String timestamp = getFormattedTime(local);
-    
-    Serial.println(timestamp);
 
-    delay(1000);
+    // Combine parts into a single String for printing
+    String logEntry = String(utc) + " - " + timestamp + ": " + data; 
+    logData(SD_MMC, logEntry);
+  }
+  delay(50);
+}
+
+//#############################################################################################
+void logData(fs::FS &fs, const String &logEntry) {
+  // Open the file for writing
+  File file = fs.open("/log.txt", FILE_APPEND);
+  if (!file) {
+    Serial.println("Failed to open log file");
+    return;
+  }
+  
+  // Write the log entry to the file
+  file.println(logEntry);
+  
+  // Close the file
+  file.close();
+  
+  // Print the log entry to the Serial monitor for debugging
+  Serial.println(logEntry);
 }
 
 //#############################################################################################
