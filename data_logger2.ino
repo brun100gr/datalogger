@@ -150,6 +150,20 @@ void setup() {
 
         AsyncWebServerResponse *response = request->beginResponse(SD_MMC, "/"+fileName, String(), true);
         request->send(response);
+      } else if (request->hasArg("delete")) {
+        // Get the argument with the full file name
+        String fullFileName = request->arg("delete");
+
+        // Define the prefix to remove
+        String prefix = "delete_";
+        
+        // Remove the prefix by using the substring method
+        String fileName = fullFileName.substring(prefix.length());
+        Serial.printf("Delete filename: %s\n", fileName);
+
+        Delete(SD_MMC, "/"+fileName);
+        Dir(request); // Build webpage ready for display
+        request->send(200, "text/html", webpage);
       } else {
         // Invia la pagina HTML
         Dir(request); // Costruisce la pagina web pronta per essere visualizzata
@@ -433,6 +447,21 @@ void Directory(fs::FS &fs, const char * dirname) {
       numfiles++;
     }
     root.close();
+  }
+}
+
+//#############################################################################################
+void Delete(fs::FS &fs, const String& filePath) {
+  // Check if the file exists before attempting to delete it
+  if (SD_MMC.exists(filePath)) {
+    // Try to delete the file
+    if (SD_MMC.remove(filePath)) {
+      Serial.println("File deleted successfully");
+    } else {
+      Serial.println("Failed to delete file");
+    }
+  } else {
+    Serial.println("File does not exist");
   }
 }
 
