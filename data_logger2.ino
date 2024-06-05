@@ -5,7 +5,7 @@
 #include <vector>
 #include <NTPClient.h>
 #include <Timezone.h>
-//#include <WiFiUdp.h>
+#include <ArduinoOTA.h>
 
 //#include "CSS.h"  // Includes headers of the web and de style file
 
@@ -176,25 +176,43 @@ void setup() {
 
   server.begin();  // Start the server
 
-/*
-  // Aprire il file in modalità scrittura
-  File file = SD_MMC.open(filename, FILE_WRITE);
-  
-  // Controllare se il file è stato aperto correttamente
-  if (!file) {
-    Serial.println("Errore nell'apertura del file");
-    return;
-  }
-  
-  // Scrivere una stringa nel file
-  String dataString = "Questo è un esempio di stringa che verrà scritta nel file.";
-  file.println(dataString);
-  
-  // Chiudere il file
-  file.close();
-  
-  Serial.println("Stringa scritta nel file con successo");
-*/
+  // Hostname defaults to esp3232-[MAC]
+  ArduinoOTA.setHostname("myesp32datalogger");
+
+  ArduinoOTA
+    .onStart([]() {
+      String type;
+      if (ArduinoOTA.getCommand() == U_FLASH) {
+        type = "sketch";
+      } else {  // U_SPIFFS
+        type = "filesystem";
+      }
+
+      // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
+      Serial.println("Start updating " + type);
+    })
+    .onEnd([]() {
+      Serial.println("\nEnd");
+    })
+    .onProgress([](unsigned int progress, unsigned int total) {
+      Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
+    })
+    .onError([](ota_error_t error) {
+      Serial.printf("Error[%u]: ", error);
+      if (error == OTA_AUTH_ERROR) {
+        Serial.println("Auth Failed");
+      } else if (error == OTA_BEGIN_ERROR) {
+        Serial.println("Begin Failed");
+      } else if (error == OTA_CONNECT_ERROR) {
+        Serial.println("Connect Failed");
+      } else if (error == OTA_RECEIVE_ERROR) {
+        Serial.println("Receive Failed");
+      } else if (error == OTA_END_ERROR) {
+        Serial.println("End Failed");
+      }
+    });
+
+  ArduinoOTA.begin();
 }
 
 //#############################################################################################
@@ -256,6 +274,9 @@ void loop() {
     String logEntry = String(utc) + " - " + timestamp + ": " + data; 
     logData(SD_MMC, logEntry);
   }
+
+  ArduinoOTA.handle();
+  
   delay(50);
 }
 
