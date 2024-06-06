@@ -31,9 +31,11 @@ String webpage, MessageLine;
 fileinfo Filenames[200]; // Enough for most purposes!
 int numfiles;
 
+int currentHour = -1;
+
 // Initialize WiFi and NTP Client
 WiFiUDP ntpUDP;
-NTPClient timeClient(ntpUDP, "pool.ntp.org", 0, 60000); // Sync every minute
+NTPClient timeClient(ntpUDP, "pool.ntp.org", 0, 600000); // Sync every minute
 
 // Define your local time zone and DST rules
 TimeChangeRule dstStart = {"DST", Last, Sun, Mar, 2, 120};  // Last Sunday of March at 2:00 AM UTC+2
@@ -103,6 +105,9 @@ void setup() {
 
   // Update the NTP client to get the latest time
   timeClient.update();
+
+  // Get initial hour
+  currentHour = timeClient.getHours();
 
   /*********  Server Commands  **********/
   // ##################### HOMEPAGE HANDLER ###########################
@@ -271,22 +276,7 @@ void loop() {
     // Update the NTP client to get the latest time
     timeClient.update();
     
-    // Get current epoch time
-    time_t utc = timeClient.getEpochTime();
-  
-    // Print the epoch time in seconds
-    //Serial.print("Epoch Time (seconds): ");
-    //Serial.println(utc);
-    
-    // Convert to local time with DST adjustment
-    time_t local = timezone.toLocal(utc);
-    
-    // Format the timestamp
-    String timestamp = getFormattedTime(local);
-
-    // Combine parts into a single String for printing
-    String logEntry = String(utc) + " - " + timestamp + ": " + data; 
-    logData(SD_MMC, logEntry);
+    logData(SD_MMC, data);
   }
 
   ArduinoOTA.handle();
@@ -295,14 +285,35 @@ void loop() {
 }
 
 //#############################################################################################
-void logData(fs::FS &fs, const String &logEntry) {
-  // Open the file for writing
-  File file = fs.open("/log.txt", FILE_APPEND);
-  if (!file) {
-    Serial.println("Failed to open log file");
-    return;
-  }
+void logData(fs::FS &fs, const String &data) {
+  // Get current epoch time
+  time_t utc = timeClient.getEpochTime();
+
+  // Convert to local time with DST adjustment
+  time_t local = timezone.toLocal(utc);
   
+  // Format the timestamp
+  String timestamp = getFormattedTime(local);
+
+  // Combine parts into a single String for printing
+  String logEntry = String(utc) + " - " + timestamp + ": " + data;
+
+  int newHour = timeClient.getHours();
+  if (newHour != currentHour) {
+    currentHour = newHour;
+    Serial.println("New hour detected! Current date and time: " + timeClient.getFormattedTime());
+  }
+
+  // Attempt to open the file in append mode
+  File file = SD_MMC.open("/log_" + timestamp.substring(0, 11) + ".txt", FILE_APPEND);
+  if (!file) {
+    // If the file doesn't exist, open it in write mode to create it
+    file = SD_MMC.open("/log_" + timestamp.substring(0, 11) + ".txt", FILE_WRITE);
+    if (!file) {
+      Serial.println("Failed to create log file");
+      return;
+    }
+  }
   // Write the log entry to the file
   file.println(logEntry);
   
@@ -316,8 +327,8 @@ void logData(fs::FS &fs, const String &logEntry) {
 //#############################################################################################
 // Convert epoch time to formatted time string
 String getFormattedTime(time_t epochTime) {
-  char buffer[20];
-  snprintf(buffer, sizeof(buffer), "%04d-%02d-%02d %02d:%02d:%02d", year(epochTime), month(epochTime), day(epochTime), hour(epochTime), minute(epochTime), second(epochTime));
+  char buffer[16];
+  snprintf(buffer, sizeof(buffer), "%04d%02d%02d_%02d%02d%02d", year(epochTime), month(epochTime), day(epochTime), hour(epochTime), minute(epochTime), second(epochTime));
   return String(buffer);
 }
 
